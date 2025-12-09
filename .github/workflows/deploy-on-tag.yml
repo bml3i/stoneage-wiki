@@ -20,13 +20,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: yarn   # 如果用 npm，改成 cache: npm
+          cache: npm
 
       - name: Install deps
-        run: yarn install --frozen-lockfile   # npm 用户：npm ci
+        run: npm ci
 
       - name: Build
-        run: yarn build                       # npm 用户：npm run build
+        run: npm run build
 
       # 把产物推到 gh-pages 分支，peaceiris/actions-gh-pages 会自动创建/更新分支
       - name: Deploy to gh-pages
