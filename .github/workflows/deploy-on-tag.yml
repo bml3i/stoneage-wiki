@@ -1,0 +1,39 @@
+name: Deploy Docusaurus on Tag
+
+# 仅在打 tag 时触发
+on:
+  push:
+    tags:
+      - 'v*'          # 匹配 v1.0.0 这类 tag，可按需调整
+
+permissions:
+  contents: write    # 允许写 gh-pages 分支
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: yarn   # 如果用 npm，改成 cache: npm
+
+      - name: Install deps
+        run: yarn install --frozen-lockfile   # npm 用户：npm ci
+
+      - name: Build
+        run: yarn build                       # npm 用户：npm run build
+
+      # 把产物推到 gh-pages 分支，peaceiris/actions-gh-pages 会自动创建/更新分支
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build          # Docusaurus 默认输出目录
+          publish_branch: gh-pages
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
