@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>倾斜45度矩阵</title>
+<style>
+html,body{height:100%}
+body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;font-family:sans-serif;background:#f5f5f5}
+#controls{display:flex;gap:8px;padding:12px}
+#result{white-space:pre;background:#fff;border:1px solid #ddd;padding:8px;min-width:320px;min-height:48px}
+#grid{position:relative;width:800px;height:600px;background:#fff;border:1px solid #ddd;overflow:hidden}
+.cell{position:absolute;width:28px;height:28px;background:#fff;border:1px solid #ccc;transform:translate(-50%,-50%) rotate(45deg);box-sizing:border-box;cursor:pointer;transition:background-color .12s,border-color .12s}
+.cell.black{background:#000;border-color:#000}
+</style>
+</head>
+<body>
+<div id="controls">
+<button id="reset">重置</button>
+<button id="generate">生成坐标列表</button>
+<div id="result"></div>
+</div>
+<div id="grid"></div>
+<script>
+const range=5
+const size=28
+const gap=2
+const stepX=size/Math.SQRT2+gap
+const stepY=size/Math.SQRT2+gap
+const grid=document.getElementById('grid')
+const midX=grid.clientWidth/2
+const midY=grid.clientHeight/2
+const selected=new Set()
+function key(a,b){return a+','+b}
+function copyText(t){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t)
+  }else{
+    const ta=document.createElement('textarea')
+    ta.value=t
+    ta.style.position='fixed'
+    ta.style.opacity='0'
+    document.body.appendChild(ta)
+    ta.focus()
+    ta.select()
+    try{document.execCommand('copy')}catch(e){}
+    ta.remove()
+  }
+}
+for(let a=-range;a<=range;a++){
+  for(let b=-range;b<=range;b++){
+    const x=midX+(a+b)*stepX
+    const y=midY+(b-a)*stepY
+    const d=document.createElement('div')
+    d.className='cell'
+    d.style.left=x+'px'
+    d.style.top=y+'px'
+    d.dataset.a=a
+    d.dataset.b=b
+    d.addEventListener('click',()=>{
+      const k=key(a,b)
+      if(selected.has(k)){
+        selected.delete(k)
+        d.classList.remove('black')
+      }else{
+        selected.add(k)
+        d.classList.add('black')
+      }
+    })
+    grid.appendChild(d)
+  }
+}
+document.getElementById('generate').addEventListener('click',()=>{
+  const arr=[...selected].map(s=>{
+    const [a,b]=s.split(',').map(Number)
+    return [a,b]
+  })
+  const txt=JSON.stringify(arr)
+  document.getElementById('result').textContent=txt
+  copyText(txt)
+})
+document.getElementById('reset').addEventListener('click',()=>{
+  selected.clear()
+  document.querySelectorAll('.cell.black').forEach(el=>el.classList.remove('black'))
+  document.getElementById('result').textContent=''
+})
+</script>
+</body>
+</html>
