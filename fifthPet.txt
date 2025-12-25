@@ -1,0 +1,39 @@
+const fifthPetActions = [];
+fifthPetActions.push("标记 评估宠物五");
+fifthPetActions.push("延迟 500");
+fifthPetActions.push("对话 正在评估宠物一，请稍后...,0");
+fifthPetActions.push("延迟 1000");
+fifthPetActions.push("宠物有 5," + petName);
+fifthPetActions.push("错误跳转 评估宠物一");
+fifthPetActions.push("");
+
+checkPoints.forEach((item, index) => {
+  fifthPetActions.push("标记 评估宠物五LV" + item.checkLevel);
+  fifthPetActions.push("宠物状态 5,LV,==," + item.checkLevel);
+
+  if(index !== checkPoints.length - 1) {
+    fifthPetActions.push("错误跳转 评估宠物五LV" + checkPoints[index + 1].checkLevel);
+  } else {
+    fifthPetActions.push("错误跳转 评估宠物一");
+  }
+  fifthPetActions.push("");
+  fifthPetActions.push("标记 评估宠物五LV" + item.checkLevel + "的攻击");
+  fifthPetActions.push("宠物状态 5,攻击,<," + item.minAttack);
+  fifthPetActions.push("错误跳转 评估宠物五LV" + item.checkLevel + "的防御");
+  fifthPetActions.push("跳转 扔掉宠物五");
+  fifthPetActions.push("");
+  fifthPetActions.push("标记 评估宠物五LV" + item.checkLevel + "的防御");
+  fifthPetActions.push("宠物状态 5,防御,<," + item.minDefense);
+  fifthPetActions.push("错误跳转 评估宠物五LV" + item.checkLevel + "的敏捷");
+  fifthPetActions.push("跳转 扔掉宠物五");
+  fifthPetActions.push("");
+  fifthPetActions.push("标记 评估宠物五LV" + item.checkLevel + "的敏捷");
+  fifthPetActions.push("宠物状态 5,敏捷,<," + item.minAgility);
+
+  if(index !== checkPoints.length - 1) {
+    fifthPetActions.push("错误跳转 评估宠物五LV" + checkPoints[index + 1].checkLevel);
+  } else {
+    fifthPetActions.push("错误跳转 评估宠物一");
+  }
+  fifthPetActions.push("跳转 扔掉宠物五");
+});

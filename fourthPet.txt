@@ -1,6 +1,8 @@
 const fourthPetActions = [];
 fourthPetActions.push("标记 评估宠物四");
 fourthPetActions.push("延迟 500");
+fourthPetActions.push("对话 正在评估宠物四，请稍后...,0");
+fourthPetActions.push("延迟 1000");
 fourthPetActions.push("宠物有 4," + petName);
 fourthPetActions.push("错误跳转 评估宠物五");
 fourthPetActions.push("");

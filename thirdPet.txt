@@ -1,6 +1,8 @@
 const thirdPetActions = [];
 thirdPetActions.push("标记 评估宠物三");
 thirdPetActions.push("延迟 500");
+thirdPetActions.push("对话 正在评估宠物三，请稍后...,0");
+thirdPetActions.push("延迟 1000");
 thirdPetActions.push("宠物有 3," + petName);
 thirdPetActions.push("错误跳转 评估宠物四");
 thirdPetActions.push("");

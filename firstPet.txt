@@ -1,6 +1,8 @@
 const firstPetActions = [];
 firstPetActions.push("标记 评估宠物一");
 firstPetActions.push("延迟 500");
+firstPetActions.push("对话 正在评估宠物一，请稍后...,0");
+firstPetActions.push("延迟 1000");
 firstPetActions.push("宠物有 1," + petName);
 firstPetActions.push("错误跳转 评估宠物二");
 firstPetActions.push("");
