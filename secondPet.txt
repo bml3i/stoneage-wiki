@@ -1,0 +1,37 @@
+const secondPetActions = [];
+secondPetActions.push("标记 评估宠物二");
+secondPetActions.push("延迟 500");
+secondPetActions.push("宠物有 2," + petName);
+secondPetActions.push("错误跳转 评估宠物三");
+secondPetActions.push("");
+
+checkPoints.forEach((item, index) => {
+  secondPetActions.push("标记 评估宠物二LV" + item.checkLevel);
+  secondPetActions.push("宠物状态 2,LV,==," + item.checkLevel);
+
+  if(index !== checkPoints.length - 1) {
+    secondPetActions.push("错误跳转 评估宠物二LV" + checkPoints[index + 1].checkLevel);
+  } else {
+    secondPetActions.push("错误跳转 评估宠物三");
+  }
+  secondPetActions.push("");
+  secondPetActions.push("标记 评估宠物二LV" + item.checkLevel + "的攻击");
+  secondPetActions.push("宠物状态 2,攻击,<," + item.minAttack);
+  secondPetActions.push("错误跳转 评估宠物二LV" + item.checkLevel + "的防御");
+  secondPetActions.push("跳转 扔掉宠物二");
+  secondPetActions.push("");
+  secondPetActions.push("标记 评估宠物二LV" + item.checkLevel + "的防御");
+  secondPetActions.push("宠物状态 2,防御,<," + item.minDefense);
+  secondPetActions.push("错误跳转 评估宠物二LV" + item.checkLevel + "的敏捷");
+  secondPetActions.push("跳转 扔掉宠物二");
+  secondPetActions.push("");
+  secondPetActions.push("标记 评估宠物二LV" + item.checkLevel + "的敏捷");
+  secondPetActions.push("宠物状态 2,敏捷,<," + item.minAgility);
+
+  if(index !== checkPoints.length - 1) {
+    secondPetActions.push("错误跳转 评估宠物二LV" + checkPoints[index + 1].checkLevel);
+  } else {
+    secondPetActions.push("错误跳转 评估宠物三");
+  }
+  secondPetActions.push("跳转 扔掉宠物二");
+});
