@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宠物三围管理器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        input {
+            width: 90%;
+            padding: 4px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+        input:read-only {
+            background-color: #e9e9e9;
+            color: #555;
+            border: 1px solid #ddd;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        button {
+            padding: 6px 12px;
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background-color: #007bb5;
+        }
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>宠物三围管理器</h1>
+    <div id="container">
+        <div class="loading">正在加载数据...</div>
+    </div>
+
+    <script>
+        const API_DATA_URL = 'https://n8n.leobiblog.top/webhook/pet-growth-data';
+        const API_CHECK_URL = 'https://n8n.leobiblog.top/webhook/check-pets';
+
+        async function init() {
+            const container = document.getElementById('container');
+            try {
+                const response = await fetch(API_DATA_URL);
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                const data = await response.json();
+                renderTable(data, container);
+            } catch (error) {
+                container.innerHTML = `<div style="color:red;text-align:center;">加载失败: ${error.message}</div>`;
+                console.error('Fetch error:', error);
+            }
+        }
+
+        function renderTable(data, container) {
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const headers = [
+                '宠物名称', '备注', '初始等级', '初始攻击', '初始防御', '初始敏捷',
+                '期望攻击成长', '期望防御成长', '期望敏捷成长',
+                '120级攻击', '120级防御', '120级敏捷', '检查等级', '操作'
+            ];
+            const trHead = document.createElement('tr');
+            headers.forEach(text => {
+                const th = document.createElement('th');
+                th.textContent = text;
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                createRow(tr, item);
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+
+            container.innerHTML = '';
+            container.appendChild(table);
+        }
+
+        function createRow(tr, item) {
+            // Helper to create cell with input
+            const createInputCell = (value, type = 'text', readOnly = false, key = null, step = null) => {
+                const td = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = type;
+                input.value = value;
+                if (readOnly) input.readOnly = true;
+                if (key) input.dataset.key = key;
+                if (step) input.step = step;
+                td.appendChild(input);
+                tr.appendChild(td);
+                return input;
+            };
+
+            // 1. 宠物名称 (不允许改动)
+            const nameInput = createInputCell(item['宠物名称'], 'text', true, 'petName');
+            
+            // 2. 备注 (不允许改动)
+            createInputCell(item['备注'] || '', 'text', true, 'memo');
+
+            // 3. 初始等级 (可以改动)
+            const levelInput = createInputCell(item['初始等级'], 'number', false, 'baseLevel');
+
+            // 4-6. 初始三围 (可以改动)
+            const atkInput = createInputCell(item['初始攻击'], 'number', false, 'baseAttack');
+            const defInput = createInputCell(item['初始防御'], 'number', false, 'baseDefense');
+            const agiInput = createInputCell(item['初始敏捷'], 'number', false, 'baseAgility');
+
+            // 7-9. 期望成长率 (可以改动, 最多3位小数) - 使用API的“满档”作为初始值
+            const rateAtkInput = createInputCell(item['满档攻击'], 'number', false, 'minAttackRate', '0.001');
+            const rateDefInput = createInputCell(item['满档防御'], 'number', false, 'minDefenseRate', '0.001');
+            const rateAgiInput = createInputCell(item['满档敏捷'], 'number', false, 'minAgilityRate', '0.001');
+
+            // 10-12. 120级三围 (不允许改动, 实时计算)
+            const lv120AtkInput = createInputCell('', 'text', true, 'lv120Atk');
+            const lv120DefInput = createInputCell('', 'text', true, 'lv120Def');
+            const lv120AgiInput = createInputCell('', 'text', true, 'lv120Agi');
+
+            // 13. 检查等级 (可以改动, 默认值 "30,50,70")
+            const checkLevelsInput = createInputCell('30,50,70', 'text', false, 'checkLevels');
+
+            // 14. 生成脚本按钮
+            const btnTd = document.createElement('td');
+            const btn = document.createElement('button');
+            btn.textContent = '生成脚本';
+            btn.disabled = true; // Initially disabled until validation runs
+            btnTd.appendChild(btn);
+            tr.appendChild(btnTd);
+
+            // Calculation and Validation Logic
+            const inputs = [
+                levelInput, atkInput, defInput, agiInput,
+                rateAtkInput, rateDefInput, rateAgiInput
+            ];
+
+            function update() {
+                const baseLevel = parseInt(levelInput.value) || 0;
+                const baseAtk = parseInt(atkInput.value) || 0;
+                const baseDef = parseInt(defInput.value) || 0;
+                const baseAgi = parseInt(agiInput.value) || 0;
+                
+                const rateAtk = parseFloat(rateAtkInput.value) || 0;
+                const rateDef = parseFloat(rateDefInput.value) || 0;
+                const rateAgi = parseFloat(rateAgiInput.value) || 0;
+
+                // Update 120 stats
+                // Formula: base + (120 - baseLevel) * rate
+                const calc120 = (base, rate) => Math.floor(base + (120 - baseLevel) * rate);
+                
+                lv120AtkInput.value = calc120(baseAtk, rateAtk);
+                lv120DefInput.value = calc120(baseDef, rateDef);
+                lv120AgiInput.value = calc120(baseAgi, rateAgi);
+
+                // Validation
+                // 初始等级>=1
+                // 初始三围>=0
+                // 期望成长率>=0
+                let isValid = true;
+                if (baseLevel < 1) isValid = false;
+                if (baseAtk < 0 || baseDef < 0 || baseAgi < 0) isValid = false;
+                if (rateAtk < 0 || rateDef < 0 || rateAgi < 0) isValid = false;
+                
+                // Also check if inputs are actually numbers (not empty strings resulting in NaN/0 logic issues if strictly empty)
+                if (levelInput.value === '' || atkInput.value === '' || defInput.value === '' || agiInput.value === '' ||
+                    rateAtkInput.value === '' || rateDefInput.value === '' || rateAgiInput.value === '') {
+                    isValid = false;
+                }
+
+                btn.disabled = !isValid;
+            }
+
+            // Attach listeners
+            inputs.forEach(inp => {
+                inp.addEventListener('input', update);
+            });
+
+            // Initial calculation
+            update();
+
+            // Button click handler
+            btn.addEventListener('click', () => {
+                const params = new URLSearchParams({
+                    petName: nameInput.value,
+                    checkLevels: checkLevelsInput.value,
+                    baseLevel: levelInput.value,
+                    baseAttack: atkInput.value,
+                    baseDefense: defInput.value,
+                    baseAgility: agiInput.value,
+                    minAttackRate: rateAtkInput.value,
+                    minDefenseRate: rateDefInput.value,
+                    minAgilityRate: rateAgiInput.value
+                });
+                
+                const url = `${API_CHECK_URL}?${params.toString()}`;
+                window.open(url, '_blank');
+            });
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
