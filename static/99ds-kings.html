@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成就列表</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+        }
+        .filters {
+            margin-bottom: 20px;
+            text-align: center;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .filters select {
+            padding: 8px;
+            margin: 0 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            position: sticky;
+            top: 0;
+            text-align: center;
+        }
+        td {
+            text-align: center;
+        }
+        /* Align detailed description to left for better readability */
+        td:nth-child(4) {
+            text-align: left;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            color: #666;
+        }
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="filters">
+        <label>
+            一级栏目:
+            <select id="filter-level1">
+                <option value="">全部</option>
+            </select>
+        </label>
+        <label>
+            二级栏目:
+            <select id="filter-level2">
+                <option value="">全部</option>
+            </select>
+        </label>
+    </div>
+
+    <div id="container">
+        <div class="loading">正在加载数据...</div>
+    </div>
+
+    <script>
+        const API_URL = 'https://n8n.leobiblog.top/webhook/achievements';
+        let allData = [];
+        let level1Options = new Set();
+        let level2Map = new Map(); // Map<Level1, Set<Level2>>
+
+        async function init() {
+            const container = document.getElementById('container');
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                const data = await response.json();
+                allData = data;
+                processFilters(data);
+                renderTable(data);
+            } catch (error) {
+                container.innerHTML = `<div style="color:red;text-align:center;">加载失败: ${error.message}</div>`;
+                console.error('Fetch error:', error);
+            }
+        }
+
+        function processFilters(data) {
+            level1Options.clear();
+            level2Map.clear();
+
+            data.forEach(item => {
+                const l1 = item['一级栏目'];
+                const l2 = item['二级栏目'];
+
+                if (l1) {
+                    level1Options.add(l1);
+                    if (!level2Map.has(l1)) {
+                        level2Map.set(l1, new Set());
+                    }
+                    if (l2) {
+                        level2Map.get(l1).add(l2);
+                    }
+                }
+            });
+
+            // Populate Level 1 Select
+            const s1 = document.getElementById('filter-level1');
+            [...level1Options].sort().forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                s1.appendChild(opt);
+            });
+
+            // Attach Listeners
+            s1.addEventListener('change', onLevel1Change);
+            document.getElementById('filter-level2').addEventListener('change', filterData);
+        }
+
+        function onLevel1Change() {
+            const l1Val = document.getElementById('filter-level1').value;
+            const s2 = document.getElementById('filter-level2');
+            
+            // Clear Level 2 options
+            s2.innerHTML = '<option value="">全部</option>';
+            
+            if (l1Val && level2Map.has(l1Val)) {
+                // Populate specific Level 2 options for selected Level 1
+                [...level2Map.get(l1Val)].sort().forEach(val => {
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val;
+                    s2.appendChild(opt);
+                });
+            } else if (!l1Val) {
+                // If Level 1 is "All", maybe show all Level 2 options? 
+                // Requirement says "filter operation", usually level 2 depends on level 1.
+                // Let's gather ALL level 2 options if Level 1 is empty.
+                const allL2 = new Set();
+                for (let set of level2Map.values()) {
+                    set.forEach(v => allL2.add(v));
+                }
+                [...allL2].sort().forEach(val => {
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val;
+                    s2.appendChild(opt);
+                });
+            }
+            
+            filterData();
+        }
+
+        function filterData() {
+            const l1Val = document.getElementById('filter-level1').value;
+            const l2Val = document.getElementById('filter-level2').value;
+
+            const filtered = allData.filter(item => {
+                const match1 = !l1Val || item['一级栏目'] === l1Val;
+                const match2 = !l2Val || item['二级栏目'] === l2Val;
+                return match1 && match2;
+            });
+
+            renderTable(filtered);
+        }
+
+        function renderTable(data) {
+            const container = document.getElementById('container');
+            if (data.length === 0) {
+                container.innerHTML = '<div class="no-data">暂无匹配数据</div>';
+                return;
+            }
+
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const headers = [
+                '一级栏目', '二级栏目', '成就名称', 
+                '成就详细说明', '玩家名称', '成就达成时间', '见证人'
+            ];
+            
+            const trHead = document.createElement('tr');
+            headers.forEach(text => {
+                const th = document.createElement('th');
+                th.textContent = text;
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                
+                // Order matches headers
+                const fields = [
+                    item['一级栏目'], item['二级栏目'], item['成就名称'],
+                    item['成就详细说明'], item['玩家名称'], 
+                    item['成就达成时间'], item['见证人']
+                ];
+
+                fields.forEach(val => {
+                    const td = document.createElement('td');
+                    td.textContent = val || '';
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+
+            container.innerHTML = '';
+            container.appendChild(table);
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
