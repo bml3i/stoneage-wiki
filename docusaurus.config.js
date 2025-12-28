@@ -59,6 +59,26 @@ const config = {
     ],
   ],
 
+  plugins: [
+    function () {
+      return {
+        name: 'custom-webpack-config',
+        configureWebpack(config, isServer) {
+          return {
+            module: {
+              rules: [
+                {
+                  test: /\.sec$/,
+                  type: 'asset/resource',
+                },
+              ],
+            },
+          };
+        },
+      };
+    },
+  ],
+
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
