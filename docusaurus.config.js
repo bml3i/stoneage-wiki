@@ -103,6 +103,12 @@ const config = {
           },
           {
             type: 'docSidebar',
+            sidebarId: 'faqSidebar',
+            position: 'left',
+            label: 'FAQ',
+          },
+          {
+            type: 'docSidebar',
             sidebarId: 'tutorialSidebar',
             position: 'left',
             label: '其他教程',
