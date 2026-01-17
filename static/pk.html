@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PK信息中心</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;margin:20px;background:#f5f5f5}
+h1{text-align:center;margin-bottom:10px}
+#channel-info{text-align:center;margin-bottom:10px;color:#555}
+#broadcast-bar{position:relative;margin:10px auto 20px auto;max-width:960px;background:#222;color:#fff;overflow:hidden;border-radius:6px;display:flex;align-items:flex-start;padding:6px 10px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+#broadcast-label{margin-right:10px;font-size:16px;white-space:nowrap;color:#ffeb3b}
+#broadcast-text-container{flex:1;overflow:hidden}
+#broadcast-text{font-size:16px;line-height:1.5;white-space:normal;display:block;max-height:8em;overflow:hidden}
+table{width:100%;max-width:1200px;margin:0 auto;border-collapse:collapse;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.1);font-size:13px}
+th,td{border:1px solid #ddd;padding:6px 4px;text-align:center;vertical-align:middle}
+th{background:#4caf50;color:#fff;position:sticky;top:0;z-index:1}
+input[type=text],textarea,select{width:95%;box-sizing:border-box;padding:4px;border:1px solid #ccc;border-radius:4px;font-size:12px}
+textarea{resize:vertical;min-height:40px}
+button{padding:4px 10px;font-size:12px;border:none;border-radius:4px;background:#008cba;color:#fff;cursor:pointer}
+button:disabled{background:#ccc;cursor:not-allowed}
+button:hover:not(:disabled){background:#0079a3}
+.cell-small input[type=text]{width:90px}
+.row-index{width:40px}
+.status-badge{display:inline-block;margin-left:6px;font-size:11px;color:#999}
+.error{color:#c00}
+</style>
+<script src="https://unpkg.com/@supabase/supabase-js@2.90.1/dist/umd/supabase.js"></script>
+</head>
+<body>
+<h1 id="page-title"></h1>
+<div id="channel-info"></div>
+<div id="supabase-status"></div>
+<div id="broadcast-bar">
+<div id="broadcast-label">广播消息</div>
+<div id="broadcast-text-container">
+<div id="broadcast-text">暂无广播消息</div>
+</div>
+</div>
+<table>
+<colgroup>
+<col style="width:120px"> <!-- 玩家ID-->
+<col style="width:100px"> <!-- PK职责 -->
+<col style="width:55px"> <!-- 人敏 -->
+<col style="width:140px"> <!-- 骑宠/战宠 -->
+<col style="width:100px"> <!-- 净化首饰-->
+<col style="width:100px"> <!-- 属性首饰-->
+<col style="width:100px"> <!-- 镜/光/复活-->
+<col style="width:100px"> <!-- 武器/精灵-->
+<col style="width:100px"> <!-- 补血装备-->
+<col style="width:160px"> <!-- 其他备注-->
+<col style="width:220px"> <!-- 广播内容-->
+<col style="width:60px"> <!-- 操作-->
+</colgroup>
+<thead>
+<tr>
+<th>玩家ID</th>
+<th>PK职责</th>
+<th>人敏</th>
+<th>骑宠/战宠</th>
+<th>净化首饰</th>
+<th>属性首饰</th>
+<th>镜/光/复活</th>
+<th>武器/精灵</th>
+<th>补血装备</th>
+<th>其他备注</th>
+<th>广播内容</th>
+<th>操作</th>
+</tr>
+</thead>
+<tbody id="pk-body"></tbody>
+</table>
+<script>
+var SUPABASE_URL="https://kvnxmaryttkagcjayakz.supabase.co";
+var SUPABASE_PUBLISHABLE_KEY="sb_publishable_UkmpjerbkbkZJnB1mihPZA_JrzjtmyZ";
+var TABLE_NAME="pk_room_rows";
+var SHOW_SUPABASE_STATUS=false;
+var rowCount=5;
+var rows=[];
+var supabaseClient=null;
+var realtimeChannel=null;
+var channelId=null;
+var clientId="c_"+Math.random().toString(36).slice(2);
+var hasReceivedSnapshot=false;
+var isApplyingRemote=false;
+var broadcastMessages=[];
+var broadcastIndex=0;
+var broadcastSeq=0;
+function setStatus(t,e){if(!SHOW_SUPABASE_STATUS)return;var el=document.getElementById("supabase-status");if(!el)return;el.style.display="block";el.textContent=t||"";el.style.color=e?"#c00":"#555"}
+function getChannelFromUrl(){var p=new URLSearchParams(window.location.search);var v=p.get("channel");if(!v)return null;v=v.trim();if(!v)return null;v=v.replace(/ /g,"+");return v}
+function decodeChannelName(v){if(!v)return"PK信息中心";try{var s=v.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4!==0)s+="=";var b=atob(s);var text;if(window.TextDecoder){var len=b.length;var bytes=new Uint8Array(len);for(var i=0;i<len;i++)bytes[i]=b.charCodeAt(i);text=new TextDecoder("utf-8").decode(bytes)}else{text=decodeURIComponent(escape(b))}if(!text.trim())return"PK信息中心";return text}catch(e){return"PK信息中心"}}
+function initRows(){rows=[];for(var i=0;i<rowCount;i++){rows.push({index:i,playerId:"",role:"未选择",agility:"",pets:"",jewelSpirit:"",jewelElement:"",jewelSpecial:"",weapon:"",healType:"未选择",remark:"",chat:""})}}
+function createCellInput(tr,rowIndex,field){var td=document.createElement("td");var input=document.createElement("input");input.type="text";input.dataset.row=rowIndex;input.dataset.field=field;input.addEventListener("blur",onFieldBlur);td.appendChild(input);tr.appendChild(td);return input}
+function createCellTextarea(tr,rowIndex,field){var td=document.createElement("td");var ta=document.createElement("textarea");ta.dataset.row=rowIndex;ta.dataset.field=field;ta.addEventListener("blur",onFieldBlur);td.appendChild(ta);tr.appendChild(td);return ta}
+function createCellSelect(tr,rowIndex,field,options){var td=document.createElement("td");var sel=document.createElement("select");sel.dataset.row=rowIndex;sel.dataset.field=field;for(var i=0;i<options.length;i++){var opt=document.createElement("option");opt.value=options[i];opt.textContent=options[i];sel.appendChild(opt)}sel.addEventListener("change",onFieldBlur);sel.addEventListener("blur",onFieldBlur);td.appendChild(sel);tr.appendChild(td);return sel}
+function renderTable(){var tbody=document.getElementById("pk-body");tbody.innerHTML="";for(var i=0;i<rowCount;i++){var tr=document.createElement("tr");var inputPlayer=createCellInput(tr,i,"playerId");var selRole=createCellSelect(tr,i,"role",["未选择","医生","属性手","精灵手","攻人","其他"]);var inputAgi=createCellInput(tr,i,"agility");var inputPets=createCellInput(tr,i,"pets");var inputJewelSpirit=createCellInput(tr,i,"jewelSpirit");var inputJewelElement=createCellInput(tr,i,"jewelElement");var inputJewelSpecial=createCellInput(tr,i,"jewelSpecial");var inputWeapon=createCellInput(tr,i,"weapon");var selHeal=createCellSelect(tr,i,"healType",["未选择","滋润","恩惠"]);var taRemark=createCellTextarea(tr,i,"remark");var taChat=createCellTextarea(tr,i,"chat");var tdOp=document.createElement("td");var btn=document.createElement("button");btn.textContent="广播";btn.dataset.row=i;btn.addEventListener("click",onBroadcastClick);tdOp.appendChild(btn);tr.appendChild(tdOp);tbody.appendChild(tr);syncInputsFromState(i,{playerId:inputPlayer,role:selRole,agility:inputAgi,pets:inputPets,jewelSpirit:inputJewelSpirit,jewelElement:inputJewelElement,jewelSpecial:inputJewelSpecial,weapon:inputWeapon,healType:selHeal,remark:taRemark,chat:taChat})}}
+function syncInputsFromState(rowIndex,controls){var state=rows[rowIndex];if(!state)return;if(controls.playerId)controls.playerId.value=state.playerId;if(controls.role)controls.role.value=state.role||"未选择";if(controls.agility)controls.agility.value=state.agility;if(controls.pets)controls.pets.value=state.pets;if(controls.jewelSpirit)controls.jewelSpirit.value=state.jewelSpirit;if(controls.jewelElement)controls.jewelElement.value=state.jewelElement;if(controls.jewelSpecial)controls.jewelSpecial.value=state.jewelSpecial;if(controls.weapon)controls.weapon.value=state.weapon;if(controls.healType)controls.healType.value=state.healType||"未选择";if(controls.remark)controls.remark.value=state.remark;if(controls.chat)controls.chat.value=state.chat}
+function updateLocalState(rowIndex,field,value){var row=rows[rowIndex];if(!row)return;row[field]=value}
+function findControl(rowIndex,field){var selector='[data-row="'+rowIndex+'"][data-field="'+field+'"]';return document.querySelector(selector)}
+function refreshAllInputsFromState(){for(var i=0;i<rowCount;i++){var row=rows[i];if(!row)continue;var fields=["playerId","role","agility","pets","jewelSpirit","jewelElement","jewelSpecial","weapon","healType","remark","chat"];for(var j=0;j<fields.length;j++){var name=fields[j];var c=findControl(i,name);if(c&&document.activeElement!==c)c.value=row[name]||""}}}
+async function persistRow(rowIndex){if(!supabaseClient||!channelId)return;var row=rows[rowIndex];if(!row)return;var payload={channel_id:channelId,row_index:rowIndex,player_id:row.playerId||null,role:row.role||"未选择",agility:row.agility||null,pets:row.pets||null,jewel_spirit:row.jewelSpirit||null,jewel_element:row.jewelElement||null,jewel_special:row.jewelSpecial||null,weapon:row.weapon||null,heal_type:row.healType||"未选择",remark:row.remark||null,chat:row.chat||null,updated_at:new Date().toISOString()};try{var res=await supabaseClient.from(TABLE_NAME).upsert(payload,{onConflict:"channel_id,row_index"});if(res.error){console.error("upsert error",res.error);setStatus("保存失败: "+res.error.message,true)}}catch(e){console.error("upsert error",e);setStatus("保存失败",true)}}
+function onFieldBlur(e){var el=e.target;var rowIndex=parseInt(el.dataset.row,10);var field=el.dataset.field;var value=el.value;updateLocalState(rowIndex,field,value);sendRowUpdate(rowIndex,field,value);persistRow(rowIndex)}
+function onBroadcastClick(e){var rowIndex=parseInt(e.currentTarget.dataset.row,10);var row=rows[rowIndex];if(!row)return;var text=row.chat||"";if(!text.trim())return;sendAnnouncement(text,rowIndex)}
+function addBroadcastMessage(text,rowIndex,ts,playerId,role){if(!text)return;broadcastSeq++;broadcastMessages.push({seq:broadcastSeq,text:text,rowIndex:rowIndex,playerId:playerId||null,role:role||"未选择",ts:ts||Date.now()});if(broadcastMessages.length>10)broadcastMessages=broadcastMessages.slice(broadcastMessages.length-10);updateBroadcastText()}
+function updateBroadcastText(){var el=document.getElementById("broadcast-text");if(!el)return;el.innerHTML="";if(!broadcastMessages.length){el.textContent="暂无广播消息";return}var recent=broadcastMessages.slice(-5);for(var i=0;i<recent.length;i++){var m=recent[i];var name=m.playerId;var role=m.role||"未选择";if(!name){var r=rows[m.rowIndex];if(r&&r.playerId)name=r.playerId;if(r&&r.role)role=r.role}var line=document.createElement("div");var prefix="";if(name)prefix=name+"["+role+"]: ";line.textContent=m.seq+". "+prefix+m.text;el.appendChild(line)}}
+function rotateBroadcast(){if(!broadcastMessages.length)return;broadcastIndex=(broadcastIndex+1)%broadcastMessages.length;updateBroadcastText()}
+function setupBroadcastLoop(){setInterval(rotateBroadcast,3000)}
+async function loadRoomState(){if(!supabaseClient||!channelId)return;try{var res=await supabaseClient.from(TABLE_NAME).select("*").eq("channel_id",channelId).order("row_index",{ascending:true});if(res.error){console.error("load error",res.error);setStatus("加载房间状态失败: "+res.error.message,true);return}if(!res.data||!res.data.length){for(var i=0;i<rowCount;i++)persistRow(i);setStatus("房间为空，已初始化默认数据",false);return}isApplyingRemote=true;initRows();for(var k=0;k<res.data.length;k++){var r=res.data[k];var idx=r.row_index;if(idx>=0&&idx<rowCount){rows[idx]={index:idx,playerId:r.player_id||"",role:r.role||"未选择",agility:r.agility||"",pets:r.pets||"",jewelSpirit:r.jewel_spirit||"",jewelElement:r.jewel_element||"",jewelSpecial:r.jewel_special||"",weapon:r.weapon||"",healType:r.heal_type||"未选择",remark:r.remark||"",chat:r.chat||""}}}isApplyingRemote=false;refreshAllInputsFromState();setStatus("房间状态已从数据库加载",false)}catch(e){console.error("load error",e);setStatus("加载房间状态异常",true)}}
+function initSupabase(){if(!window.supabase){setStatus("Supabase SDK 未加载，请检查 supabase.min.js",true);return}if(!SUPABASE_URL||!SUPABASE_PUBLISHABLE_KEY){setStatus("缺少 Supabase 配置",true);return}supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);setStatus("已连接 Supabase",false);var name="pk_"+channelId;realtimeChannel=supabaseClient.channel(name,{config:{broadcast:{self:true}}});realtimeChannel.on("broadcast",{event:"row_update"},function(payload){handleRemoteRowUpdate(payload)});realtimeChannel.on("broadcast",{event:"state_sync"},function(payload){handleRemoteStateSync(payload)});realtimeChannel.on("broadcast",{event:"sync_request"},function(payload){handleSyncRequest(payload)});realtimeChannel.on("broadcast",{event:"announcement"},function(payload){handleRemoteAnnouncement(payload)});realtimeChannel.subscribe(function(status){if(status==="SUBSCRIBED"){sendSyncRequest()}})}
+function sendRowUpdate(rowIndex,field,value){if(!realtimeChannel)return;realtimeChannel.send({type:"broadcast",event:"row_update",payload:{rowIndex:rowIndex,field:field,value:value,clientId:clientId}})}
+function sendSnapshot(targetClientId){if(!realtimeChannel)return;realtimeChannel.send({type:"broadcast",event:"state_sync",payload:{rows:rows,clientId:clientId,target:targetClientId||null}})}
+function sendSyncRequest(){if(!realtimeChannel)return;realtimeChannel.send({type:"broadcast",event:"sync_request",payload:{clientId:clientId}})}
+function sendAnnouncement(text,rowIndex){if(!realtimeChannel)return;var name="";var role="未选择";var row=rows[rowIndex];if(row){if(row.playerId)name=row.playerId;if(row.role)role=row.role}realtimeChannel.send({type:"broadcast",event:"announcement",payload:{text:text,rowIndex:rowIndex,playerId:name||null,role:role||"未选择",ts:Date.now(),clientId:clientId}})}
+function handleRemoteRowUpdate(message){var payload=message.payload||message;if(!payload)return;if(payload.clientId===clientId)return;var rowIndex=payload.rowIndex;var field=payload.field;var value=payload.value;isApplyingRemote=true;updateLocalState(rowIndex,field,value);var control=findControl(rowIndex,field);if(control&&document.activeElement!==control)control.value=value;isApplyingRemote=false}
+function handleRemoteStateSync(message){var payload=message.payload||message;if(!payload)return;if(payload.clientId===clientId)return;if(payload.target&&payload.target!==clientId)return;if(!payload.rows||!Array.isArray(payload.rows))return;isApplyingRemote=true;rows=payload.rows.map(function(r){return{index:r.index,playerId:r.playerId||"",role:r.role||"未选择",agility:r.agility||"",pets:r.pets||"",jewelSpirit:r.jewelSpirit||"",jewelElement:r.jewelElement||"",jewelSpecial:r.jewelSpecial||"",weapon:r.weapon||"",healType:r.healType||"未选择",remark:r.remark||"",chat:r.chat||""}});refreshAllInputsFromState();hasReceivedSnapshot=true;isApplyingRemote=false}
+function handleSyncRequest(message){var payload=message.payload||message;if(!payload)return;if(payload.clientId===clientId)return;var hasData=rows.some(function(r){return r.playerId||r.role!=="未选择"||r.agility||r.pets||r.jewelSpirit||r.jewelElement||r.jewelSpecial||r.weapon||r.healType!=="未选择"||r.remark||r.chat});if(!hasData)return;sendSnapshot(payload.clientId)}
+function handleRemoteAnnouncement(message){var payload=message.payload||message;if(!payload)return;addBroadcastMessage(payload.text,payload.rowIndex,payload.ts,payload.playerId,payload.role)}
+function initPage(){if(!SHOW_SUPABASE_STATUS){var s=document.getElementById("supabase-status");if(s)s.style.display="none"}channelId=getChannelFromUrl();var titleEl=document.getElementById("page-title");if(titleEl)titleEl.textContent=decodeChannelName(channelId);var info=document.getElementById("channel-info");if(!channelId){info.innerHTML='<span class="error">缺少 channel 参数，实时同步已禁用。</span>';initRows();renderTable();setupBroadcastLoop();return}info.textContent="当前频道: "+channelId;initRows();renderTable();setupBroadcastLoop();initSupabase();loadRoomState()}
+window.addEventListener("DOMContentLoaded",initPage);
+</script>
+</body>
+</html>
