@@ -15,7 +15,7 @@ sidebar_position: 1
 <img src={require('./assets/img/security-center-exclude.png').default} alt="Windows安全中心" style={{width: 600}} />
 
 :::tip[关于安全性]
-添加排除项后，游戏和外挂将不再被Windows安全中心扫描，从而被误识别为病毒从而被删除。
+添加排除项后，游戏和外挂将不再被Windows安全中心扫描，从而不会被误识别为病毒然后被删除。
 :::
 
 
