@@ -107,6 +107,12 @@ const config = {
             position: 'left',
             label: 'FAQ',
           },
+                    {
+            type: 'docSidebar',
+            sidebarId: 'walkthroughSidebar',
+            position: 'left',
+            label: '合成攻略',
+          },
           {
             type: 'docSidebar',
             sidebarId: 'tutorialSidebar',
