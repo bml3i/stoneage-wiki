@@ -68,7 +68,7 @@ const config = {
             module: {
               rules: [
                 {
-                  test: /\.sec$/,
+                  test: /\.(sec|txt)$/i,
                   type: 'asset/resource',
                 },
               ],
