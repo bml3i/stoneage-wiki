@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>伊朗战争成本 — 实时计数器</title>
+<meta name="description" content="美国纳税人为"卓越 Fury"行动及伊朗冲突支出的实时估算。来源：布朗大学战争成本项目、大西洋理事会、史汀生中心。">
+<meta property="og:title" content="伊朗战争成本 — 实时计数器">
+<meta property="og:description" content="美国纳税人为"卓越 Fury"行动支出的实时估算。">
+<meta name="twitter:title" content="伊朗战争成本 — 实时计数器">
+<meta name="twitter:description" content="美国纳税人为"卓越 Fury"行动支出的实时估算。来源：布朗大学、大西洋理事会、史汀生中心。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: #0c0a09;
+    color: #e7e5e4;
+    font-family: 'Newsreader', 'Source Serif Pro', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .alert-bar {
+    width: 100%;
+    background: linear-gradient(90deg, #450a0a 0%, #7f1d1d 50%, #450a0a 100%);
+    padding: 8px 16px;
+    text-align: center;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #fca5a5;
+    font-weight: 600;
+    animation: pulse-bg 4s ease-in-out infinite;
+  }
+
+  @keyframes pulse-bg {
+    0%, 100% { background: linear-gradient(90deg, #450a0a 0%, #7f1d1d 50%, #450a0a 100%); }
+    50% { background: linear-gradient(90deg, #450a0a 0%, #991b1b 50%, #450a0a 100%); }
+  }
+
+  .container {
+    max-width: 640px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  .header { text-align: center; margin-bottom: 32px; }
+
+  .header h1 {
+    font-size: 15px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: #78716c;
+    font-weight: 400;
+    margin: 0 0 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .header .sub {
+    font-size: 11px;
+    color: #57534e;
+    letter-spacing: 1px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .big-counter {
+    background: linear-gradient(135deg, rgba(127,29,29,0.15) 0%, rgba(12,10,9,0.9) 100%);
+    border: 1px solid rgba(220,38,38,0.2);
+    border-radius: 12px;
+    padding: 28px 24px;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .big-counter .label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #a8a29e;
+    margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  #live-cost {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 36px;
+    font-weight: 700;
+    color: #f87171;
+    letter-spacing: 1px;
+    line-height: 1.2;
+    text-shadow: 0 0 40px rgba(239,68,68,0.3);
+  }
+
+  .big-counter .range {
+    font-size: 11px;
+    color: #78716c;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .elapsed {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+    align-items: flex-start;
+  }
+
+  .elapsed .digit-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .elapsed .digit {
+    background: rgba(220, 38, 38, 0.12);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    border-radius: 6px;
+    padding: 6px 10px;
+    min-width: 44px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fca5a5;
+    letter-spacing: 1px;
+  }
+
+  .elapsed .digit-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #78716c;
+    margin-top: 4px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .elapsed .colon {
+    color: #57534e;
+    font-size: 22px;
+    padding-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .rate-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .rate-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 14px 12px;
+    text-align: center;
+  }
+
+  .rate-card .rc-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #78716c;
+    margin-bottom: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .rate-card .rc-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fca5a5;
+  }
+
+  .section-box {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 20px 20px 8px;
+    margin-bottom: 24px;
+  }
+
+  .section-title {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #78716c;
+    margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .cost-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .cost-line .cl-label { color: #d6d3d1; font-size: 13px; font-weight: 500; }
+  .cost-line .cl-note { color: #78716c; font-size: 11px; margin-top: 2px; }
+  .cost-line .cl-val {
+    font-family: 'JetBrains Mono', monospace;
+    color: #e7e5e4;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: right;
+    min-width: 140px;
+    flex-shrink: 0;
+  }
+
+  .market-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .market-card {
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .market-card .mc-label {
+    font-size: 10px;
+    color: #78716c;
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .market-card .mc-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .market-card .mc-note { font-size: 10px; color: #57534e; margin-top: 2px; }
+
+  .comparison-box {
+    background: linear-gradient(135deg, rgba(120,113,108,0.08), rgba(12,10,9,0.95));
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .comparison-box .comp-line {
+    font-size: 13px;
+    color: #a8a29e;
+    line-height: 1.8;
+  }
+
+  .comparison-box .comp-line strong { color: #d6d3d1; font-weight: 600; }
+
+  .comparison-box .comp-note {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #78716c;
+  }
+
+  .methodology {
+    padding: 16px 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-size: 11px;
+    color: #57534e;
+    line-height: 1.7;
+  }
+
+  .methodology .meth-title {
+    font-weight: 600;
+    color: #78716c;
+    margin-bottom: 6px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .methodology strong { color: #78716c; }
+
+  @media (max-width: 480px) {
+    #live-cost { font-size: 26px; }
+    .container { padding: 20px 16px; }
+    .rate-cards { grid-template-columns: 1fr; }
+    .market-grid { grid-template-columns: 1fr; }
+    .elapsed { gap: 6px; }
+    .elapsed .digit { font-size: 18px; min-width: 38px; padding: 5px 7px; }
+    .elapsed .colon { font-size: 18px; }
+    .cost-line { flex-direction: column; gap: 4px; }
+    .cost-line .cl-val { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<div class="alert-bar">
+  ● 实时估算 &nbsp;·&nbsp; "卓越 Fury"行动 &nbsp;·&nbsp; 打击始于 2026年2月28日
+</div>
+
+<div class="container">
+
+  <div class="header">
+    <h1>伊朗战争成本</h1>
+    <div class="sub">美国纳税人资金</div>
+  </div>
+
+  <!-- BIG COUNTER -->
+  <div class="big-counter">
+    <div class="label">"卓越 Fury"行动 — 自打击开始以来美国预估成本</div>
+    <div id="live-cost">$0</div>
+    <div class="range" id="range-line"></div>
+    <div class="elapsed" id="elapsed"></div>
+  </div>
+
+  <!-- RATE CARDS -->
+  <div class="rate-cards" id="rate-cards"></div>
+
+  <!-- BROADER COSTS -->
+  <div class="section-box">
+    <div class="section-title">更广泛的美国成本 — 伊朗及代理冲突</div>
+    <div id="cost-lines"></div>
+  </div>
+
+  <!-- MARKET IMPACT -->
+  <div class="section-box">
+    <div class="section-title">经济与市场影响（截至3月2日）</div>
+    <div class="market-grid" id="market-grid"></div>
+  </div>
+
+  <!-- COMPARISON -->
+  <div class="comparison-box">
+    <div class="section-title">对比参考</div>
+    <div class="comp-line"><strong>9/11后战争：</strong> 20年内8万亿美元（平均每天约3亿美元）</div>
+    <div class="comp-line"><strong>伊拉克战争平均油价：</strong> 约72美元/桶（2026年价值约100+美元）</div>
+    <div class="comp-line"><strong>伊朗-伊拉克战争（1980-88年）：</strong> 合计6220亿美元（约为伊朗9年GDP）</div>
+    <div class="comp-line"><strong>美国国债利息：</strong> 仅2026年预计达1万亿美元</div>
+    <div class="comp-note">
+      每100万美元军费支出创造约5个就业岗位。<br>
+      同样100万美元用于教育可创造约13个就业，用于医疗可创造约9个。
+    </div>
+  </div>
+
+  <!-- METHODOLOGY -->
+  <div class="methodology">
+    <div class="meth-title">方法论与数据来源</div>
+    <p>
+      实时估算基于伊拉克战争类比，以美国 actively 进行作战行动每天2.5亿美元中间值为准
+      及布朗大学战争成本分析。范围：每天1.5亿至4亿美元。打击前部署约每天3000万美元。
+      "卓越 Fury"行动的实际成本在高峰打击行动期间可能会显著更高。
+      不包括：长期退伍军人护理、经济机会成本、能源中断带来的间接成本，
+      或盟国支出。
+    </p>
+    <p style="margin-top:8px">
+      <strong>来源：</strong> 布朗大学战争成本项目 · 大西洋理事会 · 史汀生中心 ·
+      国会预算办公室 · Calcalist · Rystad Energy · SIPRI
+    </p>
+  </div>
+
+</div>
+
+<script>
+// ─── CONFIG ───
+const STRIKE_START = new Date("2026-02-28T04:00:00Z");
+const DAILY_COST_LOW = 150000000;
+const DAILY_COST_MID = 250000000;
+const DAILY_COST_HIGH = 400000000;
+
+function fmt(n) {
+  if (n >= 1e12) return "$" + (n / 1e12).toFixed(1) + "T";
+  if (n >= 1e9) return "$" + (n / 1e9).toFixed(1) + "B";
+  if (n >= 1e6) return "$" + (n / 1e6).toFixed(1) + "M";
+  return "$" + Math.floor(n).toLocaleString("en-US");
+}
+
+function fmtFull(n) {
+  return "$" + Math.floor(n).toLocaleString("en-US");
+}
+
+function pad(n) { return String(n).padStart(2, "0"); }
+
+// ─── STATIC RENDERS ───
+
+// Rate cards
+const perSec = Math.round(DAILY_COST_MID / 86400);
+const perHour = Math.round(DAILY_COST_MID / 24);
+[
+  { label: "每秒", val: "$" + perSec.toLocaleString() },
+  { label: "每小时", val: "$" + perHour.toLocaleString() },
+  { label: "每天", val: "$" + DAILY_COST_MID.toLocaleString() },
+].forEach(d => {
+  const el = document.createElement("div");
+  el.className = "rate-card";
+  el.innerHTML = `<div class="rc-label">${d.label}</div><div class="rc-val">${d.val}</div>`;
+  document.getElementById("rate-cards").appendChild(el);
+});
+
+// Cost lines
+const costs = [
+  { label: "美国对10月7日后冲突的支出", val: "$314亿 – $338亿", note: "布朗大学战争成本项目，截至2025年10月" },
+  { label: "&nbsp;&nbsp;↳ 对以色列军事援助", val: "$220亿", note: "自2023年10月7日以来" },
+  { label: "&nbsp;&nbsp;↳ 也门/地区行动", val: "$97亿 – $121亿", note: "胡塞运动战役，地区军力部署" },
+  { label: "午夜锤行动（2025年6月核打击）", val: "$1.96亿", note: "GBU-57掩体炸弹打击福特沃/纳坦兹/伊斯法罕" },
+  { label: "以色列 — 上升的狮子行动（2025年6月）", val: "$6.5亿", note: "12天战争，约200亿谢克尔" },
+  { label: "以色列2026年国防预算", val: "$447亿", note: "1440亿谢克尔 — 历史上最高；22亿专门针对伊朗" },
+  { label: "打击前美国部署（2026年1-2月）", val: "$3000万/天", note: "航母战斗群、战斗机、导弹防御系统" },
+];
+costs.forEach(d => {
+  const el = document.createElement("div");
+  el.className = "cost-line";
+  el.innerHTML = `
+    <div style="flex:1">
+      <div class="cl-label">${d.label}</div>
+      ${d.note ? `<div class="cl-note">${d.note}</div>` : ""}
+    </div>
+    <div class="cl-val">${d.val}</div>`;
+  document.getElementById("cost-lines").appendChild(el);
+});
+
+// Market cards
+const markets = [
+  { label: "布伦特原油", val: "$72.87 → $80+", color: "#f87171", note: "预计+10-20美元/桶" },
+  { label: "汽油价格", val: "+13¢/加仑", color: "#f87171", note: "周一开始" },
+  { label: "标普500期货", val: "−1.0%+", color: "#f87171", note: "" },
+  { label: "黄金", val: "+3% ($150+)", color: "#4ade80", note: "避险资金流入" },
+  { label: "道琼斯期货", val: "−500+点", color: "#f87171", note: "" },
+  { label: "霍尔木兹海峡", val: "暂停通航", color: "#fbbf24", note: "全球20%石油运输" },
+];
+markets.forEach(d => {
+  const el = document.createElement("div");
+  el.className = "market-card";
+  el.innerHTML = `
+    <div class="mc-label">${d.label}</div>
+    <div class="mc-val" style="color:${d.color}">${d.val}</div>
+    ${d.note ? `<div class="mc-note">${d.note}</div>` : ""}`;
+  document.getElementById("market-grid").appendChild(el);
+});
+
+// ─── LIVE TICKER ───
+const liveCostEl = document.getElementById("live-cost");
+const rangeEl = document.getElementById("range-line");
+const elapsedEl = document.getElementById("elapsed");
+
+function tick() {
+  const now = Date.now();
+  const ms = now - STRIKE_START.getTime();
+  const totalDays = ms / 86400000;
+  const totalSec = ms / 1000;
+
+  // Live cost
+  const cost = totalSec * (DAILY_COST_MID / 86400);
+  liveCostEl.textContent = fmtFull(cost);
+
+  // Range
+  const low = totalDays * DAILY_COST_LOW;
+  const high = totalDays * DAILY_COST_HIGH;
+  rangeEl.textContent = `中间值估算 @ 约$${Math.round(DAILY_COST_MID/1e6)}M/天  |  范围：${fmt(low)} – ${fmt(high)}`;
+
+  // Elapsed
+  const secs = Math.floor(ms / 1000);
+  const mins = Math.floor(secs / 60);
+  const hrs = Math.floor(mins / 60);
+  const days = Math.floor(hrs / 24);
+
+  elapsedEl.innerHTML = `
+    <div class="digit-box"><div class="digit">${pad(days)}</div><div class="digit-label">天</div></div>
+    <div class="colon">:</div>
+    <div class="digit-box"><div class="digit">${pad(hrs % 24)}</div><div class="digit-label">时</div></div>
+    <div class="colon">:</div>
+    <div class="digit-box"><div class="digit">${pad(mins % 60)}</div><div class="digit-label">分</div></div>
+    <div class="colon">:</div>
+    <div class="digit-box"><div class="digit">${pad(secs % 60)}</div><div class="digit-label">秒</div></div>`;
+
+  requestAnimationFrame(tick);
+}
+
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
