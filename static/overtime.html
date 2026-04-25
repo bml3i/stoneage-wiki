@@ -104,7 +104,8 @@
         // If on HTTPS but target is HTTP, use a proxy to avoid "Mixed Content" error
         if (window.location.protocol === 'https:' && url.startsWith('http://')) {
             // Using a public CORS/HTTPS proxy as a workaround
-            return fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+            // `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+            return fetch(url);
         }
         return fetch(url);
     }
