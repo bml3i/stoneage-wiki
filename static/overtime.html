@@ -99,6 +99,16 @@
     const monthSelect = document.getElementById('monthSelect');
     const resultArea = document.getElementById('resultArea');
 
+    // Helper to handle HTTP requests from HTTPS (GitHub Pages)
+    async function secureFetch(url) {
+        // If on HTTPS but target is HTTP, use a proxy to avoid "Mixed Content" error
+        if (window.location.protocol === 'https:' && url.startsWith('http://')) {
+            // Using a public CORS/HTTPS proxy as a workaround
+            return fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        }
+        return fetch(url);
+    }
+
     // Initialize
     window.addEventListener('DOMContentLoaded', init);
 
@@ -106,9 +116,9 @@
         try {
             // Fetch static data (Member Details & Special Dates) and Month Options in parallel
             const [monthsRes, membersRes, specialDatesRes] = await Promise.all([
-                fetch(API_MONTH_OPTIONS),
-                fetch(API_MEMBER_DETAILS),
-                fetch(API_SPECIAL_DATES)
+                secureFetch(API_MONTH_OPTIONS),
+                secureFetch(API_MEMBER_DETAILS),
+                secureFetch(API_SPECIAL_DATES)
             ]);
 
             const monthsData = await monthsRes.json();
@@ -155,7 +165,7 @@
         resultArea.value = 'Processing...';
 
         try {
-            const response = await fetch(`${API_OVERTIME_DATA}?month=${selectedMonth}`);
+            const response = await secureFetch(`${API_OVERTIME_DATA}?month=${selectedMonth}`);
             const overtimeData = await response.json();
             
             console.log('Fetched Overtime Data:', overtimeData); // Debug log
