@@ -99,6 +99,16 @@
     const monthSelect = document.getElementById('monthSelect');
     const resultArea = document.getElementById('resultArea');
 
+    // Helper to handle HTTP requests from HTTPS (GitHub Pages)
+    async function secureFetch(url) {
+        // If on HTTPS but target is HTTP, use a proxy to avoid "Mixed Content" error
+        if (window.location.protocol === 'https:' && url.startsWith('http://')) {
+            // Using a public CORS/HTTPS proxy as a workaround
+            return fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        }
+        return fetch(url);
+    }
+
     // Initialize
     window.addEventListener('DOMContentLoaded', init);
 
@@ -106,9 +116,9 @@
         try {
             // Fetch static data (Member Details & Special Dates) and Month Options in parallel
             const [monthsRes, membersRes, specialDatesRes] = await Promise.all([
-                fetch(API_MONTH_OPTIONS),
-                fetch(API_MEMBER_DETAILS),
-                fetch(API_SPECIAL_DATES)
+                secureFetch(API_MONTH_OPTIONS),
+                secureFetch(API_MEMBER_DETAILS),
+                secureFetch(API_SPECIAL_DATES)
             ]);
 
             const monthsData = await monthsRes.json();
@@ -124,17 +134,26 @@
     }
 
     function populateMonthSelect(data) {
-        // Data format: [{"month_options":["2026-1","2026-2"]}]
+        // Updated for n8n data table format
         monthSelect.innerHTML = '<option value="" disabled selected>Please select a month</option>';
         
-        if (data && data.length > 0 && data[0].month_options) {
-            data[0].month_options.forEach(month => {
-                const option = document.createElement('option');
-                option.value = month;
-                option.textContent = month;
-                monthSelect.appendChild(option);
-            });
+        let options = [];
+        if (Array.isArray(data)) {
+            if (data.length > 0 && data[0].month_options) {
+                // Old format: [{"month_options":["2026-1",...]}]
+                options = data[0].month_options;
+            } else {
+                // New format: Array of objects with 'Month' property
+                options = data.map(item => item.Month || item.month).filter(Boolean);
+            }
         }
+
+        options.forEach(month => {
+            const option = document.createElement('option');
+            option.value = month;
+            option.textContent = month;
+            monthSelect.appendChild(option);
+        });
 
         monthSelect.addEventListener('change', handleMonthChange);
     }
@@ -146,10 +165,22 @@
         resultArea.value = 'Processing...';
 
         try {
-            const response = await fetch(`${API_OVERTIME_DATA}?month=${selectedMonth}`);
+            const response = await secureFetch(`${API_OVERTIME_DATA}?month=${selectedMonth}`);
             const overtimeData = await response.json();
             
+            console.log('Fetched Overtime Data:', overtimeData); // Debug log
+            
+            if (!overtimeData || (Array.isArray(overtimeData) && overtimeData.length === 0)) {
+                resultArea.value = 'No overtime data found for the selected month.';
+                return;
+            }
+
             processAndDisplayData(overtimeData);
+            
+            // If resultArea is still "Processing...", it means aggregation yielded no rows
+            if (resultArea.value === 'Processing...') {
+                resultArea.value = 'Data found, but could not be processed (check field names).';
+            }
         } catch (error) {
             console.error('Error fetching overtime data:', error);
             resultArea.value = 'Error fetching data: ' + error.message;
@@ -161,7 +192,9 @@
         const memberMap = new Map();
         if (memberDetailsCache) {
             memberDetailsCache.forEach(member => {
-                memberMap.set(member['English Name'], member);
+                // Handle both spaces and underscores for n8n data table
+                const name = member['English Name'] || member['EnglishName'] || member['English_Name'] || member['english_name'];
+                if (name) memberMap.set(name, member);
             });
         }
 
@@ -169,50 +202,58 @@
         const specialDateMap = new Map();
         if (specialDatesCache) {
             specialDatesCache.forEach(item => {
-                // Normalize date string if necessary, assuming format M/D/YYYY
-                specialDateMap.set(item['Special Date'], item['Overtime Type']);
+                const date = item['Special Date'] || item['SpecialDate'] || item['Special_Date'];
+                const type = item['Overtime Type'] || item['OvertimeType'] || item['Overtime_Type'];
+                if (date && type) specialDateMap.set(date, type);
             });
         }
 
         // Aggregate data by English Name and Type
         const aggregatedData = new Map();
 
-        overtimeData.forEach(record => {
-            const name = record['English Name'];
-            
-            if (!aggregatedData.has(name)) {
-                // Initialize record
-                const memberInfo = memberMap.get(name) || {};
-                aggregatedData.set(name, {
-                    meta: {
-                        englishName: name,
-                        chineseName: memberInfo['Chinese Name'] || '',
-                        title: memberInfo['Title'] || '',
-                        department: memberInfo['Department'] || ''
-                    },
-                    types: {
-                        'WORKDAY': { dates: [], hours: 0, reasons: new Set() },
-                        'WEEKEND': { dates: [], hours: 0, reasons: new Set() },
-                        'HOLIDAY': { dates: [], hours: 0, reasons: new Set() }
-                    }
-                });
-            }
-
-            const agg = aggregatedData.get(name);
-            const dateStr = record['Date'];
-            const hours = parseFloat(record['Overtime Hours']) || 0;
-            const reason = record['Overtime Reasons'];
-            const dateType = getDateType(dateStr, specialDateMap); // 'WORKDAY', 'WEEKEND', or 'HOLIDAY'
-
-            // Add data to specific type bucket
-            if (agg.types[dateType]) {
-                agg.types[dateType].dates.push(dateStr);
-                agg.types[dateType].hours += hours;
-                if (reason) {
-                    agg.types[dateType].reasons.add(reason);
+        if (Array.isArray(overtimeData)) {
+            overtimeData.forEach(record => {
+                const data = record.json || record;
+                const name = data['English Name'] || data['EnglishName'] || data['English_Name'] || data['english_name'];
+                if (!name) return;
+                
+                if (!aggregatedData.has(name)) {
+                    // Initialize record
+                    const memberInfo = memberMap.get(name) || {};
+                    aggregatedData.set(name, {
+                        meta: {
+                            englishName: name,
+                            chineseName: memberInfo['Chinese Name'] || memberInfo['ChineseName'] || memberInfo['Chinese_Name'] || '',
+                            title: memberInfo['Title'] || memberInfo['title'] || '',
+                            department: memberInfo['Department'] || memberInfo['department'] || ''
+                        },
+                        types: {
+                            'WORKDAY': { dates: [], hours: 0, reasons: new Set() },
+                            'WEEKEND': { dates: [], hours: 0, reasons: new Set() },
+                            'HOLIDAY': { dates: [], hours: 0, reasons: new Set() }
+                        }
+                    });
                 }
-            }
-        });
+
+                const agg = aggregatedData.get(name);
+                const dateStr = data['Date'] || data['date'] || data['DateValue'];
+                const hours = parseFloat(data['Overtime Hours'] || data['OvertimeHours'] || data['Overtime_Hours'] || data['hours']) || 0;
+                const reason = data['Overtime Reasons'] || data['OvertimeReasons'] || data['Overtime_Reasons'] || data['reason'];
+                
+                if (dateStr) {
+                    const dateType = getDateType(dateStr, specialDateMap); // 'WORKDAY', 'WEEKEND', or 'HOLIDAY'
+
+                    // Add data to specific type bucket
+                    if (agg.types[dateType]) {
+                        agg.types[dateType].dates.push(dateStr);
+                        agg.types[dateType].hours += hours;
+                        if (reason) {
+                            agg.types[dateType].reasons.add(reason);
+                        }
+                    }
+                }
+            });
+        }
 
         const rows = [];
         aggregatedData.forEach(agg => {
