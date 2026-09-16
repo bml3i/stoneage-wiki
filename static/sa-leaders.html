@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>莉莉石器时代 - 挂机练级队长列表</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    overflow: hidden;
+  }
+  header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #fff;
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  header h1 small {
+    display: block;
+    font-size: 12px;
+    color: #b8c2d0;
+    font-weight: 400;
+    margin-top: 4px;
+    letter-spacing: 0;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .update-time {
+    font-size: 12px;
+    color: #b8c2d0;
+  }
+  .btn-refresh {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: #fff;
+    border: none;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-refresh:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(245, 87, 108, 0.4);
+  }
+  .btn-refresh:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  .btn-refresh svg { width: 16px; height: 16px; }
+  .btn-refresh.loading svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  main { padding: 24px 32px 32px; }
+
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    background: #f8f9ff;
+    border-left: 4px solid #667eea;
+    border-radius: 6px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: #495057;
+  }
+  .status-bar .error {
+    background: #fff5f5;
+    border-left-color: #e53e3e;
+    color: #c53030;
+  }
+  .stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #4a5568;
+  }
+  .stat-chip strong { color: #667eea; font-size: 14px; }
+
+  .map-group {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .map-group:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
+
+  .map-header {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .map-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .map-icon {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .map-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2d3748;
+  }
+  .map-id {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: #718096;
+    margin-top: 2px;
+  }
+  .map-count {
+    background: #fff;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #d53f8c;
+    border: 1px solid rgba(213, 63, 140, 0.2);
+  }
+  .map-count span { font-size: 16px; margin-right: 2px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+  }
+  thead { background: #f7fafc; }
+  th, td {
+    padding: 12px 20px;
+    text-align: left;
+    font-size: 13px;
+    border-bottom: 1px solid #edf2f7;
+  }
+  th {
+    color: #718096;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  tbody tr:hover { background: #fafbff; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .td-index { width: 60px; color: #a0aec0; font-weight: 600; }
+  .td-name { font-weight: 600; color: #2d3748; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge-coord {
+    background: #e6fffa;
+    color: #234e52;
+    border: 1px solid #81e6d9;
+    font-family: "Consolas", monospace;
+  }
+  .badge-team-green {
+    background: #f0fff4;
+    color: #22543d;
+    border: 1px solid #9ae6b4;
+  }
+  .badge-team-red {
+    background: #fff5f5;
+    color: #742a2a;
+    border: 1px solid #feb2b2;
+  }
+  .td-time { color: #718096; font-size: 12px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #a0aec0;
+  }
+  .empty-state .icon { font-size: 56px; margin-bottom: 16px; opacity: 0.5; }
+  .empty-state p { font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>
+      🗺️ 莉莉石器时代 - 挂机练级队长位置 (v1.2)
+      <small>实时显示公开队长的地图与坐标，便于其他玩家入队</small>
+    </h1>
+    <div class="toolbar">
+      <div class="update-time" id="updateTime">未刷新</div>
+      <button class="btn-refresh" id="btnRefresh" onclick="refreshData()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 4v6h-6"></path>
+          <path d="M1 20v-6h6"></path>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+          <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+        </svg>
+        刷新数据
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="status-bar" id="statusBar">
+      <div>点击右上角「刷新数据」按钮获取最新队长列表</div>
+      <div style="display:flex; gap:8px;">
+        <span class="stat-chip">队长总数: <strong id="totalCount">-</strong></span>
+        <span class="stat-chip">地图数: <strong id="mapCount">-</strong></span>
+      </div>
+    </div>
+
+    <div id="content"></div>
+  </main>
+</div>
+
+<script>
+  // ============ Map ID 映射表：后续请在此处人工添加 ============
+  const MAP_NAME_MAPPING = {
+    500:    "波拉岛120雷龙",
+    60049:  "130雷龙1层",
+    60050:  "135雷龙2层",
+    60051:  "140雷龙3层",
+  };
+  // ===========================================================
+
+  const API_URL = "https://n8n.leobiblog.top/webhook/sa-leaders-data";
+
+  function getMapName(mapId) {
+    const id = Number(mapId);
+    if (MAP_NAME_MAPPING[id]) return MAP_NAME_MAPPING[id];
+    return `未知区域 (${mapId})`;
+  }
+
+  function formatTime(isoStr) {
+    if (!isoStr) return "-";
+    try {
+      const d = new Date(isoStr);
+      const pad = n => String(n).padStart(2, "0");
+      const offsetMs = d.getTime() + 8 * 3600 * 1000;
+      const local = new Date(offsetMs);
+      const y = local.getUTCFullYear();
+      const m = pad(local.getUTCMonth() + 1);
+      const day = pad(local.getUTCDate());
+      const hh = pad(local.getUTCHours());
+      const mm = pad(local.getUTCMinutes());
+      const ss = pad(local.getUTCSeconds());
+      return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+    } catch (e) {
+      return isoStr;
+    }
+  }
+
+  function timeAgo(isoStr) {
+    if (!isoStr) return "";
+    try {
+      const diff = Date.now() - new Date(isoStr).getTime();
+      const sec = Math.floor(diff / 1000);
+      if (sec < 60) return `${sec}秒前`;
+      const min = Math.floor(sec / 60);
+      if (min < 60) return `${min}分钟前`;
+      const hr = Math.floor(min / 60);
+      return `${hr}小时前`;
+    } catch (e) { return ""; }
+  }
+
+  function renderData(data) {
+    const content = document.getElementById("content");
+    const statusBar = document.getElementById("statusBar");
+    const totalCount = document.getElementById("totalCount");
+    const mapCount = document.getElementById("mapCount");
+    const updateTime = document.getElementById("updateTime");
+
+    totalCount.textContent = data.length;
+
+    if (data.length === 0) {
+      mapCount.textContent = 0;
+      content.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🏜️</div>
+          <p>暂无公开队长，<br>请稍后刷新查看</p>
+        </div>`;
+      return;
+    }
+
+    const groups = {};
+    for (const item of data) {
+      const key = String(item.Map);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    }
+
+    const mapIds = Object.keys(groups).sort((a, b) => Number(a) - Number(b));
+    mapCount.textContent = mapIds.length;
+
+    let html = "";
+    for (const mapId of mapIds) {
+      const list = groups[mapId];
+      const mapName = getMapName(mapId);
+      html += `
+        <div class="map-group">
+          <div class="map-header">
+            <div class="map-title">
+              <div class="map-icon">⚔️</div>
+              <div>
+                <div class="map-name">${mapName}</div>
+                <div class="map-id">Map ID: ${mapId}</div>
+              </div>
+            </div>
+            <div class="map-count"><span>${list.length}</span> 位队长</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>队长昵称</th>
+                <th>坐标 (东, 南)</th>
+                <th>队员数</th>
+                <th>最近更新时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${list.map((it, idx) => `
+                <tr>
+                  <td class="td-index">${idx + 1}</td>
+                  <td class="td-name">${escapeHtml(it.NickName || "未知")}</td>
+                  <td><span class="badge badge-coord">(${it.East ?? "-"}, ${it.South ?? "-"})</span></td>
+                  <td>${renderTeamBadge(it.playerCount)}</td>
+                  <td class="td-time">${formatTime(it.updatedAt)} <span style="color:#cbd5e0;">· ${timeAgo(it.updatedAt)}</span></td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    content.innerHTML = html;
+
+    const now = new Date();
+    updateTime.textContent = "上次刷新: " + formatTime(now.toISOString());
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function renderTeamBadge(playerCount) {
+    const pc = Number(playerCount) || 0;
+    const lack = 5 - pc;
+    if (pc >= 5) return `<span class="badge badge-team-red">已满员</span>`;
+    if (lack > 0) return `<span class="badge badge-team-green">缺${lack}人</span>`;
+    return `<span class="badge badge-coord">${pc}/5</span>`;
+  }
+
+  function setStatus(message, isError = false) {
+    const bar = document.getElementById("statusBar");
+    const info = bar.querySelector("div:first-child");
+    info.innerHTML = message;
+    bar.style.background = isError ? "#fff5f5" : "#f8f9ff";
+    bar.style.borderLeftColor = isError ? "#e53e3e" : "#667eea";
+    info.style.color = isError ? "#c53030" : "#495057";
+  }
+
+  async function refreshData() {
+    const btn = document.getElementById("btnRefresh");
+    btn.disabled = true;
+    btn.classList.add("loading");
+    setStatus("⏳ 正在从服务器获取队长数据...");
+
+    try {
+      const resp = await fetch(API_URL, {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      renderData(Array.isArray(data) ? data : []);
+      setStatus(`✅ 已刷新，共 <strong>${data.length}</strong> 位队长分布在 <strong>${new Set(data.map(x=>x.Map)).size}</strong> 张地图`);
+    } catch (e) {
+      console.error(e);
+      setStatus(`❌ 加载失败：${e.message}，请检查网络或稍后重试`, true);
+      document.getElementById("content").innerHTML = `
+        <div class="empty-state">
+          <div class="icon">⚠️</div>
+          <p>加载失败: ${escapeHtml(e.message)}<br><span style="font-size:12px; color:#a0aec0;">请刷新重试</span></p>
+        </div>`;
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove("loading");
+    }
+  }
+
+  refreshData();
+</script>
+</body>
+</html>
